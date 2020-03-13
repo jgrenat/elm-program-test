@@ -250,7 +250,7 @@ type alias TestProgram model msg effect sub =
 
 
 type Failure
-    = ChangedPage String Url
+    = ChangedPage String String
       -- Errors
     | ExpectFailed String String Test.Runner.Failure.Reason
     | SimulateFailed String String
@@ -1118,7 +1118,7 @@ followLink functionDescription href programTest =
         Active state ->
             case Maybe.map .currentLocation state.navigation of
                 Just location ->
-                    Finished (ChangedPage functionDescription (Url.Extra.resolve location href))
+                    Finished (ChangedPage functionDescription (Url.Extra.resolve location href |> Url.toString))
 
                 Nothing ->
                     case Url.fromString href of
@@ -1126,7 +1126,7 @@ followLink functionDescription href programTest =
                             Finished (NoBaseUrl "clickLink" href)
 
                         Just location ->
-                            Finished (ChangedPage functionDescription location)
+                            Finished (ChangedPage functionDescription (Url.toString location))
 
 
 {-| Simulates replacing the text in an input field labeled with the given label.
@@ -1466,6 +1466,9 @@ queueSimulatedEffect effect programTest =
                                             Just first ->
                                                 programTest
                                                     |> routeChangeHelper ("simulating effect: SimulatedEffect.Navigation.Back " ++ String.fromInt n) 2 (Url.toString first)
+
+                        SimulatedEffect.Load url ->
+                            Finished (ChangedPage "Navigation.load" url)
 
 
 drain : ProgramTest model msg effect -> ProgramTest model msg effect
@@ -2281,7 +2284,7 @@ done programTest =
             Expect.pass
 
         Finished (ChangedPage cause finalLocation) ->
-            Expect.fail (cause ++ " caused the program to end by navigating to " ++ escapeString (Url.toString finalLocation) ++ ".  NOTE: If this is what you intended, use ProgramTest.expectPageChange to end your test.")
+            Expect.fail (cause ++ " caused the program to end by navigating to " ++ escapeString finalLocation ++ ".  NOTE: If this is what you intended, use ProgramTest.expectPageChange to end your test.")
 
         Finished (ExpectFailed expectationName description reason) ->
             Expect.fail (expectationName ++ ":\n" ++ Test.Runner.Failure.format description reason)
@@ -2351,13 +2354,13 @@ expectPageChange : String -> ProgramTest model msg effect -> Expectation
 expectPageChange expectedUrl programTest =
     case programTest of
         Finished (ChangedPage cause finalLocation) ->
-            Url.toString finalLocation |> Expect.equal expectedUrl
+            Expect.equal expectedUrl finalLocation
 
         Finished _ ->
             programTest |> done
 
         Active _ ->
-            Expect.fail "expectPageChange: expected to have navigated to a different URL, but no links were clicked"
+            Expect.fail "expectPageChange: expected to have navigated to a different URL, but no links were clicked and no external navigation functions were used"
 
 
 {-| Asserts on the current value of the browser URL bar in the simulated test environment.

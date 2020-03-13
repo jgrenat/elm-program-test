@@ -52,7 +52,7 @@ all =
                 TestingProgram.application SimulatedEffect.Cmd.none
                     |> ProgramTest.routeChange "https://example.com/new"
                     |> ProgramTest.expectBrowserUrl (Expect.equal "https://example.com/new")
-        , test "browser history is intially empty" <|
+        , test "browser history is initially empty" <|
             \() ->
                 TestingProgram.application SimulatedEffect.Cmd.none
                     |> ProgramTest.expectBrowserHistory (Expect.equal [])
@@ -98,4 +98,8 @@ all =
                 TestingProgram.application (SimulatedEffect.Navigation.pushUrl "https://example.com/new")
                     |> ProgramTest.update (ProduceEffects (SimulatedEffect.Navigation.back 0))
                     |> ProgramTest.expectBrowserUrl (Expect.equal "https://example.com/new")
+        , test "simulating load changes page" <|
+            \() ->
+                TestingProgram.application (SimulatedEffect.Navigation.load "https://example.com/new")
+                    |> ProgramTest.expectPageChange "https://example.com/new"
         ]
